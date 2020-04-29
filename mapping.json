@@ -1,0 +1,13 @@
+{
+  "mappings": {
+    "wikientry" : {
+      "properties" : {
+        "title": { "type": "text" },
+        "short_description": { "type": "text" },
+        "content": { "type": "text" },
+        "categories": { "type": "keyword" }
+      }
+
+    }
+  }
+}
