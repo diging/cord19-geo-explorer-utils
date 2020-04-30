@@ -4,6 +4,7 @@ import getopt
 import elasticsearch
 import requests
 import sys
+import re
 
 def create_index(es_object, index_name):
     created = False
@@ -75,30 +76,31 @@ class PageHandler ( xml.sax.ContentHandler):
     if self.current_element == "title" and self.is_page and self.is_title:
         self.title = data
         self.current_doc["title"] = data
+        self.current_doc["title_keyword"] = data
     if self.current_element == "text" and self.is_page:
         self.current_text = self.current_text + data
 
   def submit_entry(self):
       lines = []
       self.current_doc["categories"] = []
+      self.current_doc["complete_text"] = self.current_text
       for line in self.current_text.splitlines():
-          if line.strip().startswith("#REDIRECT"):
-              self.current_doc = {}
-              break
+          m = re.search(r'\|\s*coordinates\s*=\s*\{\{(.*?)\}\}', line)
           if line.strip().startswith("{{short description|"):
               self.current_doc["short_description"] = line.strip()[len("{{short description|"):-2]
+          elif m and m.group(1):
+              self.current_doc["coordinates"] = m.group(1)
+              print("Coordinates: " + self.current_doc["coordinates"])
           if line.strip().startswith("{{") or line.strip().startswith("|") or line.strip().startswith("*"):
               continue
           if line.strip().startswith("[[Category:"):
               self.current_doc['categories'].append(line.strip()[len("[[Category:"):-2])
           else:
               lines.append(line.strip())
-      if self.current_doc:
-          self.current_doc["text"] = '\n'.join(lines)
-          store_record(self._es, self.current_doc, self.index)
-          print("Submitting: " + self.current_doc["title"])
-      else:
-          print("Redirect: " + self.title)
+
+      self.current_doc["content"] = '\n'.join(lines)
+      store_record(self._es, self.current_doc, self.index)
+      print("Submitting: " + self.current_doc["title"])
 
 
 ################ main script ##################
