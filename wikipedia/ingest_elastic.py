@@ -5,6 +5,7 @@ import elasticsearch
 import requests
 import sys
 import re
+import time
 
 def create_index(es_object, index_name):
     created = False
@@ -23,17 +24,21 @@ def create_index(es_object, index_name):
     finally:
         return created
 
-def store_record(elastic_object, record, index_name):
+
+def store_record(elastic_object, record, index_name, record_counter=1):
     try:
         outcome = elastic_object.index(index=index_name, doc_type='wikientry', body=record)
+        if record_counter%50==0:
+            print("Waiting.... ")
+            time.sleep(3)
     except Exception as ex:
         print('[Error] Error in indexing record')
         print(str(ex))
 
 class PageHandler ( xml.sax.ContentHandler):
 
-  def __init__( self, _es, index):
-    xml.sax.ContentHandler.__init__( self)
+  def __init__( self, _es, index, use_wait=False):
+    xml.sax.ContentHandler.__init__(self)
     self._es = _es
     self.index = index
     self.counter = 0
@@ -44,6 +49,7 @@ class PageHandler ( xml.sax.ContentHandler):
     self.current_doc = {}
     self.current_text = ""
     self.new_records = True
+    self.use_wait = use_wait
 
   def startElement( self, name, attrs):
     if name == "page":
@@ -99,7 +105,7 @@ class PageHandler ( xml.sax.ContentHandler):
               lines.append(line.strip())
 
       self.current_doc["content"] = '\n'.join(lines)
-      store_record(self._es, self.current_doc, self.index)
+      store_record(self._es, self.current_doc, self.index, self.counter if self.use_wait else 1)
       print("Submitting: " + self.current_doc["title"])
 
 
@@ -114,6 +120,7 @@ def main(arguments):
                                                              'user=',
                                                              'mapping=',
                                                              'password=',
+                                                             'wait='
                                                              ])
 
     INDEX_NAME = 'wikipedia_full'
@@ -122,6 +129,7 @@ def main(arguments):
     ES_AUTH_USER = None
     ES_AUTH_PASSWORD = None
     MAPPINGS_JSON = None
+    USE_WAIT = False
     filepath = ''
 
     for opt, arg in options:
@@ -139,6 +147,9 @@ def main(arguments):
             ES_AUTH_USER = arg
         elif opt in ('--password'):
             ES_AUTH_PASSWORD = arg
+        elif opt in ('--wait'):
+            print("Using wait...")
+            USE_WAIT = True
 
     if not MAPPINGS_JSON:
         print("Please provide a mapping file using the --mapping option.")
@@ -166,7 +177,7 @@ def main(arguments):
 
     create_index(es, INDEX_NAME)
 
-    handler = PageHandler(es, INDEX_NAME)
+    handler = PageHandler(es, INDEX_NAME, USE_WAIT)
 
     xml.sax.parse(filename, handler)
 
