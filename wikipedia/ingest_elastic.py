@@ -27,7 +27,7 @@ def create_index(es_object, index_name):
 
 def store_record(elastic_object, record, index_name, record_counter=1):
     try:
-        outcome = elastic_object.index(index=index_name, doc_type='wikientry', body=record)
+        outcome = elastic_object.index(index=index_name, doc_type='wikientry', body=record, timeout="600s")
         if record_counter%50==0:
             print("Waiting.... ")
             time.sleep(3)
