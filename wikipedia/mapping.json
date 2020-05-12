@@ -6,9 +6,10 @@
         "title_keyword": { "type": "keyword" },
         "short_description": { "type": "text" },
         "content": { "type": "text" },
+        "coordinates": {"type": "keyword" },
+        "wiki_id": { "type": "keyword" },
         "complete_text": { "type": "text" },
-        "categories": { "type": "keyword" },
-        "coordinates": {"type": "keyword" }
+        "categories": { "type": "keyword" }
       }
 
     }
